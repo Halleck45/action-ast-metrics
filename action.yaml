@@ -57,7 +57,7 @@ runs:
             --report-markdown=${REPORT_MARKDOWN_FILENAME} \
             "${DIRECTORY_TO_ANALYZE}"
 
-echo Finished
+        echo Finished
       shell: bash
       env:
         AST_METRICS_VERSION: ${{ inputs.version }}
