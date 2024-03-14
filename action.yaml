@@ -1,0 +1,51 @@
+name: 'AST Metrics analysis'
+description: 'Runs AST Metrics analysis on your project'
+author: 'Jean-François Lépine'
+branding:
+  icon: bar-chart
+  color: blue
+runs:
+  using: 'composite'
+  
+  steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Analyse
+      run: sh analyze.sh
+      shell: bash
+      env:
+        AST_METRICS_VERSION: ${{ inputs.version }}
+        DIRECTORY_TO_ANALYZE: ${{ inputs.directory }}
+        REPORT_HTML_DIRECTORY: ${{ inputs.report_html_directory }}
+        REPORT_MARKDOWN_FILENAME: ${{ inputs.report_markdown_filename }}
+
+    - name: Adding markdown
+      shell: bash
+      run: cat ${{ inputs.report_markdown_filename }} >> $GITHUB_STEP_SUMMARY
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ${{ inputs.report_html_directory }}
+        name: 'AST Metrics HTML report'
+
+inputs:
+  version:
+    description: 'Version of AST Metrics to use'
+    required: false
+    default: 'latest'
+  directory:
+    description: 'Directory to analyze'
+    required: false
+    default: '.'
+  report_html_directory:
+    description: 'Directory to deploy the report'
+    required: false
+    default: 'ast-metrics-report'
+  report_markdown_filename:
+    description: Filename to save the markdown report.
+    required: false
+    default: 'ast-metrics-report.md'
+  
