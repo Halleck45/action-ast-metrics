@@ -16,15 +16,36 @@ You will find [live example here](https://github.com/Halleck45/DesignPatternDete
 
 ## Usage
 
+Create a `.github/workflows/ast-metrics.yml` file with the following content:
+
 ```yaml
-- name: AST Metrics
-  uses: halleck45/action-ast-metrics@v1.0.2
+name: AST Metrics
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+        - name: AST Metrics
+          uses: halleck45/action-ast-metrics@v1.0.3
 ```
 
 ## Inputs
 
 + `version`: The version of AST Metrics to use. Default: `latest`
+
+```yaml
+- uses: halleck45/action-ast-metrics@v1.0.3
+  with:
+    version: 'v0.0.0-alpha'
+```
+
 + `directory`: The directory to analyze. Default: `.`
+
+```yaml
+- uses: halleck45/action-ast-metrics@v1.0.3
+  with:
+    directory: 'src'
+```
 
 ## License
 
