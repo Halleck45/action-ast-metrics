@@ -64,6 +64,7 @@ runs:
         DIRECTORY_TO_ANALYZE: ${{ inputs.directory }}
         REPORT_HTML_DIRECTORY: ${{ inputs.report_html_directory }}
         REPORT_MARKDOWN_FILENAME: ${{ inputs.report_markdown_filename }}
+        HISTORY_MONTHS: ${{ inputs.months }}
 
     - name: Adding markdown
       shell: bash
@@ -74,6 +75,87 @@ runs:
       with:
         path: ${{ inputs.report_html_directory }}
         name: 'AST Metrics HTML report'
+
+
+    - name: Analyze achives
+      run: |
+        #!/bin/sh -l
+        set -e
+
+        # remove previous artifacts
+        if [ -d archives ]; then
+            rm -rf archives
+        fi
+        if [ -d $REPORT_HTML_DIRECTORY ]; then
+            rm -rf $REPORT_HTML_DIRECTORY
+        fi
+        if [ -f $REPORT_MARKDOWN_FILENAME ]; then
+            rm -f $REPORT_MARKDOWN_FILENAME
+        fi
+
+        mkdir -p archives
+
+        # only if HISTORY_MONTHS is set and greater than 1
+        if [ -z "$HISTORY_MONTHS" ]  || [ $HISTORY_MONTHS -lt 1 ]; then
+            echo "HISTORY_MONTHS must be set and greater than 1"
+            exit 0
+        fi
+
+        current_branch=$(git rev-parse --abbrev-ref HEAD)
+        # stop if git has modifications
+        if [ -n "$(git status --porcelain)" ]; then
+            echo "Git workspace is dirty. Please commit or stash your changes before running this script."
+            exit 1
+        fi
+
+
+        # try to get the first commit of past month for HISTORY_MONTHS times
+        for ((i=0; i<$HISTORY_MONTHS; i++)); do
+
+            date=$(date -d "$(date +%Y-%m-15) -${i} month" +%Y-%m-01)
+            echo
+            echo "Looking for the first commit of $date"
+
+            sha1=$(git log --reverse --after="$date" --until="$(date -d "$date +1 month" +%Y-%m-01)" --pretty=format:"%at %H" | head -n 1)
+
+            if [ ! -z "$sha1" ]; then
+
+                # checkout this
+                current_month=$(date -d "@$(echo $sha1 | cut -d ' ' -f 1)" +%Y-%m)
+                echo "- checkout $sha1 ($current_month)"
+                git checkout $(echo $sha1 | cut -d ' ' -f 2)
+
+                echo "- analyze $DIRECTORY_TO_ANALYZE"
+                mkdir -p archives
+                /usr/local/bin/ast-metrics analyze \
+                    --non-interactive \
+                    --report-markdown=archives/${current_month}.md \
+                    "${DIRECTORY_TO_ANALYZE}"
+
+            else
+                echo "No commit found for $date"
+            fi
+        done
+
+        # checkout back
+        git checkout $current_branch
+
+        echo Finished
+      shell: bash
+      env:
+        DIRECTORY_TO_ANALYZE: ${{ inputs.directory }}
+        HISTORY_MONTHS: ${{ inputs.months }}
+        REPORT_HTML_DIRECTORY: ${{ inputs.report_html_directory }}
+        REPORT_MARKDOWN_FILENAME: ${{ inputs.report_markdown_filename }}
+      if: ${{ inputs.months }} > 0
+
+
+    - name: Upload archives artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: archives
+        name: 'archives'
+      if: ${{ inputs.months }} > 0
 
 inputs:
   version:
@@ -92,4 +174,8 @@ inputs:
     description: Filename to save the markdown report.
     required: false
     default: 'ast-metrics-report.md'
+  months:
+    description: 'Number of months to analyze'
+    required: false
+    default: 0
   

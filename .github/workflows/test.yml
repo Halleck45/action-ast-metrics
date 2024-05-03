@@ -8,3 +8,20 @@ jobs:
     steps:  
         - uses: actions/checkout@v4
         - uses: ./
+          with:
+            months: 2
+
+        - name: Assertions
+          shell: bash
+          run: |
+            # Ensure archives were generated
+            if [ ! -d archives ]; then
+                echo "Archives not found"
+                exit 1
+            fi
+
+            # Ensure archives are not empty 
+            if [ ! "$(ls -A archives)" ]; then
+                echo "Archives are empty"
+                exit 1
+            fi
